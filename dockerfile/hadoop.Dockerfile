@@ -1,11 +1,3 @@
-# FROM ubuntu:18.04
-
-# RUN apt-get update -y \
-#     && export DEBIAN_FRONTEND=noninteractive && apt-get install -y --no-install-recommends \
-#         sudo \
-#         wget \
-#         openjdk-8-jdk \
-#     && apt-get clean
 FROM eclipse-temurin:8-jdk-focal
 RUN apt-get update -y \
     && export DEBIAN_FRONTEND=noninteractive && apt-get install -y --no-install-recommends \
@@ -19,23 +11,18 @@ COPY config/hadoop/ssh_config /etc/ssh/ssh_config
 WORKDIR /home/hduser
 USER hduser
 RUN ssh-keygen -t rsa -P '' -f ~/.ssh/id_rsa && cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys && chmod 0600 ~/.ssh/authorized_keys
-ENV HADOOP_VERSION=3.2.1
+
+ENV HADOOP_VERSION=3.2.4
 ENV HADOOP_HOME /home/hduser/hadoop-${HADOOP_VERSION}
-RUN curl -sL --retry 3 \
-  "http://archive.apache.org/dist/hadoop/common/hadoop-$HADOOP_VERSION/hadoop-$HADOOP_VERSION.tar.gz" \
-  | gunzip \
-  | tar -x -C /home/hduser/ \
- && rm -rf ${HADOOP_HOME}/share/doc
+ENV HADOOP_URL=https://downloads.apache.org/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz
 
-# COPY hadoop-${HADOOP_VERSION}.tar.gz /home/hduser/
+RUN curl -fsSL ${HADOOP_URL} -o /home/hduser/hadoop-${HADOOP_VERSION}.tar.gz
 
-RUN tar -xzf hadoop-${HADOOP_VERSION}.tar.gz -C /home/hduser/ \
+RUN tar -xzf /home/hduser/hadoop-${HADOOP_VERSION}.tar.gz -C /home/hduser/ \
  && rm -rf /home/hduser/hadoop-${HADOOP_VERSION}/share/doc \
  && mkdir -p /home/hduser/hadoop-${HADOOP_VERSION} \
  && chown -R hduser:hduser /home/hduser/hadoop-${HADOOP_VERSION} \
  && rm /home/hduser/hadoop-${HADOOP_VERSION}.tar.gz
-
-#RUN mv /home/hduser/hadoop-${HADOOP_VERSION} /home/hduser/hadoop
 
 ENV HDFS_NAMENODE_USER hduser
 ENV HDFS_DATANODE_USER hduser
@@ -59,7 +46,6 @@ WORKDIR /usr/local/bin
 RUN sudo ln -s ${HADOOP_HOME}/etc/hadoop/docker-entrypoint.sh .
 WORKDIR /home/hduser
 
-# YARNSTART=0 will prevent yarn scheduler from being launched
 ENV YARNSTART 0
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
